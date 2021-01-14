@@ -1,0 +1,31 @@
+# Raidbots-generated SimC input for Armory character US Bleeding Hollow Rroggan
+# On 2021-01-14T10:25:40.236Z
+
+warrior="Rroggan"
+level="60"
+race="orc"
+region="us"
+server="bleeding-hollow"
+role="melee"
+talents="2112223"
+spec="arms"
+
+covenant="venthyr"
+soulbind="nadjia_the_mistblade:8,331586/169:5/331576/8:6/331579"
+# soulbind=theotar_the_mad_duke:9,
+
+back=",id=183033,bonus_id=7188/6652/1485/6646,enchant_id=6208,context=5"
+chest=",id=182999,bonus_id=7188/6652/1485/6646,enchant_id=6214,context=5"
+feet=",id=182983,bonus_id=7188/6652/1485/6646,context=5"
+finger1=",id=178848,bonus_id=7209/6652/6935/1501/5878/6646,gem_id=173127,enchant_id=6166,context=35"
+finger2=",id=178926,bonus_id=6959/7193/6647/6649/6758/1532,enchant_id=6166,context=63"
+hands=",id=183013,bonus_id=7188/6652/1485/6646,enchant_id=6210,context=5"
+head=",id=182997,bonus_id=7189/6652/7194/1472/6646,context=82"
+legs=",id=178800,bonus_id=7209/6652/1501/5878/6646,context=35"
+main_hand=",id=182389,bonus_id=7189/6652/1505/6646,enchant_id=6228,context=82"
+neck=",id=183039,bonus_id=7189/6652/7194/1472/6646,context=3"
+shoulder=",id=178802,bonus_id=7210/6652/1501/5878/6646,context=35"
+trinket1=",id=184016,bonus_id=7187/6652/1498/6646,context=6"
+trinket2=",id=179350,bonus_id=7203/6652/1501/5852/6646,context=16"
+waist=",id=183025,bonus_id=7188/6652/7194/1485/6646,context=5"
+wrist=",id=183018,bonus_id=7188/6652/7193/1485/6646,context=5"
