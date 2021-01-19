@@ -1,14 +1,15 @@
 package simc
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
+
+	"github.com/google/uuid"
 )
 
 type CLI struct {
@@ -19,10 +20,21 @@ var DefautlCLI CLI = CLI{
 	Executable: "simc",
 }
 
-func (c CLI) Simulate(conf Configuration) (*Result, error) {
+func (c CLI) Version() (Version, error) {
+	cmd := exec.Command("simc")
+	stdout, err := cmd.Output()
+	if stdout == nil && err != nil {
+		return "", err
+	}
+	out := string(stdout)
+	versionLine := strings.Split(out, "\n")[0]
+	return Version(versionLine), nil
+}
 
-	hash := sha256.Sum256([]byte(conf))
-	id := hex.EncodeToString(hash[:])
+func (c CLI) Simulate(conf Configuration) (*Result, error) {
+	// id := uuid.NewHash(sha256.New(), )
+	// hash := sha256.Sum256([]byte(conf))
+	id := uuid.New().String()
 
 	// TODO: make this portable, as Mkfifo is only on linux and probably mac?
 	confPath := filepath.Join(os.TempDir(), id+".simc")
@@ -39,40 +51,55 @@ func (c CLI) Simulate(conf Configuration) (*Result, error) {
 	}
 	defer os.Remove(jsonPath)
 
-	confFile, err := os.OpenFile(confPath, os.O_WRONLY|os.O_APPEND, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer confFile.Close()
-
-	jsonFile, err := os.OpenFile(jsonPath, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer jsonFile.Close()
+	errCh := make(chan error)
 
 	go func() {
-		_, _ = confFile.WriteString(string(conf)) // we have opened the pipe first as a writer. this call blocks until simc finishes reading
-		_ = confFile.Close()                      // close as early as we can
+		confFile, err := os.OpenFile(confPath, os.O_WRONLY|os.O_APPEND, 0)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer os.Remove(confFile.Name())
+		defer confFile.Close()
+
+		_, err = confFile.WriteString(string(conf)) // we have opened the pipe first as a writer. this call blocks until simc finishes reading
+		if err != nil {
+			errCh <- err
+		}
 	}()
 
-	decoder := json.NewDecoder(jsonFile)
-	var data map[string]interface{} //TODO: FIX THIS, we need a schema... maybe use CUE?
+	dataCh := make(chan map[string]interface{})
 	go func() {
-		_ = decoder.Decode(&data) // we have opened the pipe first as a reader. this call will block until the file is finished writing to
-		_ = jsonFile.Close()      // close early if we can
+		jsonFile, err := os.OpenFile(jsonPath, os.O_RDONLY, 0)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer jsonFile.Close()
+		decoder := json.NewDecoder(jsonFile)
+		var data map[string]interface{} //TODO: FIX THIS, we need a schema... maybe use CUE?
+		err = decoder.Decode(&data)     // we have opened the pipe first as a reader. this call will block until the file is finished writing to
+		if err != nil {
+			errCh <- err
+		}
+		dataCh <- data
 	}()
 
-	defer confFile.Close()
-	defer os.Remove(confFile.Name())
+	cmd := exec.Command(c.Executable, confPath) // this will block until confFile is written to, and blocks until output json is fully consumed
 
-	cmd := exec.Command(c.Executable, confFile.Name()) // this will block until confFile is written to, and blocks until output json is fully consumed
-
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		return nil, err
 	}
-	return &Result{
-		Data: data,
-	}, nil
+
+	select {
+	case data := <-dataCh:
+		return &Result{
+			Data: data,
+		}, nil
+	case err := <-errCh:
+		close(dataCh)
+		return nil, err
+	}
+
 }
